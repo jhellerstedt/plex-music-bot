@@ -8,9 +8,9 @@ from utils.weighted_picker import WeightedPicker
 
 
 class PlexPlaylistBuilder():
-	def __init__(self, username=None, password=None, resource=None):
+	def __init__(self, username=None, password=None, resource=None, server_url=None, token=None):
 		plex_library = PlexConnection(
-			username=username, password=password, resource=resource
+			username=username, password=password, resource=resource, server_url=server_url, token=token,
 		).music_library
 		self.music_library = PlexMusic(plex_library)
 
@@ -25,10 +25,23 @@ class PlexPlaylistBuilder():
 
 	def build_playlist(self, playlist_title=None, track_count=50):
 		print('Building track groupings...')
+		
+		# Validate track lists before creating pickers
+		popular_tracks = self.popular_tracks
+		recent_tracks = self.recent_tracks
+		spice_tracks = self.spice_tracks
+		
+		if not popular_tracks:
+			raise ValueError("Popular tracks list is empty. No tracks available with play counts.")
+		if not recent_tracks:
+			raise ValueError("Recent tracks list is empty. No recently played tracks found.")
+		if not spice_tracks:
+			raise ValueError("Spice tracks list is empty. No tracks available for random selection.")
+		
 		playlist_songs = set()
-		popular_picker = WeightedPicker(self.popular_tracks)
-		recent_picker = WeightedPicker(self.recent_tracks)
-		spice_picker = WeightedPicker(self.spice_tracks)
+		popular_picker = WeightedPicker(popular_tracks)
+		recent_picker = WeightedPicker(recent_tracks)
+		spice_picker = WeightedPicker(spice_tracks)
 		playlist_slots = [
 			popular_picker, recent_picker, popular_picker,
 			spice_picker, popular_picker, recent_picker
@@ -53,34 +66,40 @@ class PlexPlaylistBuilder():
 
 	@property
 	def popular_tracks(self):
-		if not self._popular_tracks:
+		if self._popular_tracks is None:
 			self._popular_tracks = self._generate_popular_tracks()
 		return self._popular_tracks
 
 	@property
 	def recent_tracks(self):
-		if not self._recent_tracks:
+		if self._recent_tracks is None:
 			self._recent_tracks = self._generate_recently_played_tracks()
 		return self._recent_tracks
 
 	@property
 	def spice_tracks(self):
-		if not self._spice_tracks:
+		if self._spice_tracks is None:
 			self._spice_tracks = self._generate_spice_tracks()
 		return self._spice_tracks
 
 	@property
 	def play_count_min(self):
 		if self._play_count_min is None:
-			self._play_count_min = self.music_library.library_search('viewCount:asc', 'track', 1)[0].viewCount
-		if self._play_count_min is None:
-			self._play_count_min = 0
+			results = self.music_library.library_search('viewCount:asc', 'track', 1)
+			if results and len(results) > 0:
+				self._play_count_min = results[0].viewCount or 0
+			else:
+				self._play_count_min = 0
 		return self._play_count_min
 
 	@property
 	def play_count_max(self):
-		if not self._play_count_max:
-			self._play_count_max = self.music_library.top_played_tracks(limit=1)[0].viewCount
+		if self._play_count_max is None:
+			results = self.music_library.top_played_tracks(limit=1)
+			if results and len(results) > 0:
+				self._play_count_max = results[0].viewCount or 0
+			else:
+				self._play_count_max = 0
 		return self._play_count_max
 
 	@property
@@ -91,36 +110,52 @@ class PlexPlaylistBuilder():
 
 	@property
 	def last_played_max(self):
-		if not self._last_played_max:
-			self._last_played_max = self.music_library.recently_played_tracks(limit=1)[0].lastViewedAt
+		if self._last_played_max is None:
+			results = self.music_library.recently_played_tracks(limit=1)
+			if results and len(results) > 0 and results[0].lastViewedAt:
+				self._last_played_max = results[0].lastViewedAt
+			else:
+				self._last_played_max = datetime.utcnow()
 		return self._last_played_max
 
 	@property
 	def artist_play_count_min(self):
 		if self._artist_play_count_min is None:
-			self._artist_play_count_min = self.music_library.library_search('viewCount:asc', 'artist', 1)[0].viewCount
-		if self._artist_play_count_min is None:
-			self._artist_play_count_min = 0
+			results = self.music_library.library_search('viewCount:asc', 'artist', 1)
+			if results and len(results) > 0:
+				self._artist_play_count_min = results[0].viewCount or 0
+			else:
+				self._artist_play_count_min = 0
 		return self._artist_play_count_min
 
 	@property
 	def artist_play_count_max(self):
-		if not self._artist_play_count_max:
-			self._artist_play_count_max = self.music_library.library_search('viewCount:desc', 'artist', 1)[0].viewCount
+		if self._artist_play_count_max is None:
+			results = self.music_library.library_search('viewCount:desc', 'artist', 1)
+			if results and len(results) > 0:
+				self._artist_play_count_max = results[0].viewCount or 0
+			else:
+				self._artist_play_count_max = 0
 		return self._artist_play_count_max
 
 	@property
 	def album_play_count_min(self):
 		if self._album_play_count_min is None:
-			self._album_play_count_min = self.music_library.library_search('viewCount:asc', 'album', 1)[0].viewCount
-		if self._album_play_count_min is None:
-			self._album_play_count_min = 0
+			results = self.music_library.library_search('viewCount:asc', 'album', 1)
+			if results and len(results) > 0:
+				self._album_play_count_min = results[0].viewCount or 0
+			else:
+				self._album_play_count_min = 0
 		return self._album_play_count_min
 
 	@property
 	def album_play_count_max(self):
-		if not self._album_play_count_max:
-			self._album_play_count_max = self.music_library.library_search('viewCount:desc', 'album', 1)[0].viewCount
+		if self._album_play_count_max is None:
+			results = self.music_library.library_search('viewCount:desc', 'album', 1)
+			if results and len(results) > 0:
+				self._album_play_count_max = results[0].viewCount or 0
+			else:
+				self._album_play_count_max = 0
 		return self._album_play_count_max
 
 	@property
@@ -133,19 +168,19 @@ class PlexPlaylistBuilder():
 
 	@property
 	def genre_play_count_max(self):
-		if not self._genre_play_count_max:
+		if self._genre_play_count_max is None:
 			self._build_mix_max_values()
 		return self._genre_play_count_max
 
 	@property
 	def genre_play_counts(self):
-		if not self._genre_play_counts:
+		if self._genre_play_counts is None:
 			self._build_mix_max_values()
 		return self._genre_play_counts
 
 	@property
 	def genre_song_counts(self):
-		if not self._genre_song_counts:
+		if self._genre_song_counts is None:
 			self._build_mix_max_values()
 		return self._genre_song_counts
 
@@ -181,6 +216,10 @@ class PlexPlaylistBuilder():
 			play_count = genre_play_counts[genre]
 			max_genre_plays = max(play_count, max_genre_plays)
 			min_genre_plays = min(play_count, min_genre_plays)
+
+		# Handle case where no genres have play counts
+		if min_genre_plays == maxsize:
+			min_genre_plays = 0
 
 		self._genre_play_counts = genre_play_counts
 		self._genre_song_counts = genre_song_counts
@@ -262,6 +301,8 @@ class PlexPlaylistBuilder():
 	def _normalize(self, input_value, min_value=0, max_value=1):
 		if input_value is None or min_value is None or max_value is None:
 			return 0
+		if max_value == min_value:
+			return 0
 		return (input_value - min_value) / (max_value - min_value)
 
 	def _generate_recently_played_tracks(self):
@@ -273,14 +314,22 @@ class PlexPlaylistBuilder():
 		if play_count < 1:
 			play_count = 1
 
+		tracks_processed = 0
+		tracks_errored = 0
+		
 		for track in self.music_library.recently_played_tracks(limit=play_count):
-			if not track.lastViewedAt:
-				# We only want tracks that have been played
+			tracks_processed += 1
+			# Include tracks even if lastViewedAt is None - they'll still be weighted appropriately
+			try:
+				track_data = self._build_track_dict(track, 'recent')
+				recent_tracks.append(track_data)
+			except Exception as e:
+				# Skip tracks that cause errors during processing
+				tracks_errored += 1
+				print(f'Warning: Skipping track due to error: {e}')
 				continue
-			track_data = self._build_track_dict(track, 'recent')
-			recent_tracks.append(track_data)
 
-		print('Generating recently played tracks... DONE.')
+		print(f'Generating recently played tracks... DONE. (Processed: {tracks_processed}, Added: {len(recent_tracks)}, Errors: {tracks_errored})')
 		return recent_tracks
 
 	def _generate_popular_tracks(self):
@@ -292,22 +341,43 @@ class PlexPlaylistBuilder():
 		if play_count < 1:
 			play_count = 1
 
-		for track in self.music_library.top_played_tracks(limit=play_count):
-			if not track.viewCount:
-				# We only want played tracks
+		tracks_processed = 0
+		tracks_errored = 0
+		
+		# Try to get top played tracks first
+		tracks = list(self.music_library.top_played_tracks(limit=play_count))
+		
+		# If no tracks from top_played_tracks, fallback to library search sorted by viewCount
+		if not tracks:
+			print('No tracks from top_played_tracks, using library search fallback...')
+			tracks = list(self.music_library.library_search('viewCount:desc', 'track', limit=play_count))
+		
+		for track in tracks:
+			tracks_processed += 1
+			# Include tracks even if viewCount is 0 or None - they'll still be weighted appropriately
+			try:
+				track_data = self._build_track_dict(track, 'popular')
+				popular_tracks.append(track_data)
+			except Exception as e:
+				# Skip tracks that cause errors during processing
+				tracks_errored += 1
+				print(f'Warning: Skipping track due to error: {e}')
 				continue
-			track_data = self._build_track_dict(track, 'popular')
-			popular_tracks.append(track_data)
 
-		print('Generating popular tracks... DONE.')
+		print(f'Generating popular tracks... DONE. (Processed: {tracks_processed}, Added: {len(popular_tracks)}, Errors: {tracks_errored})')
 		return popular_tracks
 
 	def _generate_spice_tracks(self):
 		print('Generating spice tracks...')
 		spice_tracks = []
 		for track in self.music_library.library_search('random', 'track', 300):
-			track_data = self._build_track_dict(track, 'spice')
-			spice_tracks.append(track_data)
+			try:
+				track_data = self._build_track_dict(track, 'spice')
+				spice_tracks.append(track_data)
+			except Exception as e:
+				# Skip tracks that cause errors during processing
+				print(f'Warning: Skipping track due to error: {e}')
+				continue
 
 		print('Generating spice tracks... DONE.')
 		return spice_tracks
