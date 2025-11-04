@@ -133,19 +133,19 @@ class PlexPlaylistBuilder():
 
 	@property
 	def genre_play_count_max(self):
-		if not self._genre_play_count_max:
+		if self._genre_play_count_max is None:
 			self._build_mix_max_values()
 		return self._genre_play_count_max
 
 	@property
 	def genre_play_counts(self):
-		if not self._genre_play_counts:
+		if self._genre_play_counts is None:
 			self._build_mix_max_values()
 		return self._genre_play_counts
 
 	@property
 	def genre_song_counts(self):
-		if not self._genre_song_counts:
+		if self._genre_song_counts is None:
 			self._build_mix_max_values()
 		return self._genre_song_counts
 
@@ -181,6 +181,10 @@ class PlexPlaylistBuilder():
 			play_count = genre_play_counts[genre]
 			max_genre_plays = max(play_count, max_genre_plays)
 			min_genre_plays = min(play_count, min_genre_plays)
+
+		# Handle case where no genres have play counts
+		if min_genre_plays == maxsize:
+			min_genre_plays = 0
 
 		self._genre_play_counts = genre_play_counts
 		self._genre_song_counts = genre_song_counts
