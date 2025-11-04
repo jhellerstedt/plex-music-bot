@@ -262,6 +262,8 @@ class PlexPlaylistBuilder():
 	def _normalize(self, input_value, min_value=0, max_value=1):
 		if input_value is None or min_value is None or max_value is None:
 			return 0
+		if max_value == min_value:
+			return 0
 		return (input_value - min_value) / (max_value - min_value)
 
 	def _generate_recently_played_tracks(self):
