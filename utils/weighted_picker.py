@@ -9,19 +9,29 @@ class WeightedPicker():
 
 	@property
 	def weight_totals(self):
-		if not self._weight_totals:
+		if self._weight_totals is None:
 			self._weight_totals = self._generate_weight_list()
 		return self._weight_totals
 
 	def next(self):
 		weight_total_count = len(self.weight_totals)
+		
+		# Handle empty or invalid weight totals
+		if weight_total_count == 0:
+			raise ValueError("Cannot pick from empty weight list. Ensure input_weights is not empty.")
+		
+		# Handle case where all weights are 0 or total is 0
+		if self.weight_totals[-1] <= 0:
+			# If all weights are 0, return a random item
+			return self.input_weights[random.randint(0, weight_total_count - 1)]
+		
 		target_number = random.randint(0, self.weight_totals[-1] - 1)
 		mid_level = 0
 		min_level = 0
 		max_level = weight_total_count - 1
 
 		if max_level == 0:
-			return self.weight_totals[0]
+			return self.input_weights[0]
 
 		found = False
 		while min_level <= max_level and not found:
