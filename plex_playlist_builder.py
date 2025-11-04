@@ -25,10 +25,23 @@ class PlexPlaylistBuilder():
 
 	def build_playlist(self, playlist_title=None, track_count=50):
 		print('Building track groupings...')
+		
+		# Validate track lists before creating pickers
+		popular_tracks = self.popular_tracks
+		recent_tracks = self.recent_tracks
+		spice_tracks = self.spice_tracks
+		
+		if not popular_tracks:
+			raise ValueError("Popular tracks list is empty. No tracks available with play counts.")
+		if not recent_tracks:
+			raise ValueError("Recent tracks list is empty. No recently played tracks found.")
+		if not spice_tracks:
+			raise ValueError("Spice tracks list is empty. No tracks available for random selection.")
+		
 		playlist_songs = set()
-		popular_picker = WeightedPicker(self.popular_tracks)
-		recent_picker = WeightedPicker(self.recent_tracks)
-		spice_picker = WeightedPicker(self.spice_tracks)
+		popular_picker = WeightedPicker(popular_tracks)
+		recent_picker = WeightedPicker(recent_tracks)
+		spice_picker = WeightedPicker(spice_tracks)
 		playlist_slots = [
 			popular_picker, recent_picker, popular_picker,
 			spice_picker, popular_picker, recent_picker
@@ -305,8 +318,13 @@ class PlexPlaylistBuilder():
 			if not track.lastViewedAt:
 				# We only want tracks that have been played
 				continue
-			track_data = self._build_track_dict(track, 'recent')
-			recent_tracks.append(track_data)
+			try:
+				track_data = self._build_track_dict(track, 'recent')
+				recent_tracks.append(track_data)
+			except Exception as e:
+				# Skip tracks that cause errors during processing
+				print(f'Warning: Skipping track due to error: {e}')
+				continue
 
 		print('Generating recently played tracks... DONE.')
 		return recent_tracks
@@ -324,8 +342,13 @@ class PlexPlaylistBuilder():
 			if not track.viewCount:
 				# We only want played tracks
 				continue
-			track_data = self._build_track_dict(track, 'popular')
-			popular_tracks.append(track_data)
+			try:
+				track_data = self._build_track_dict(track, 'popular')
+				popular_tracks.append(track_data)
+			except Exception as e:
+				# Skip tracks that cause errors during processing
+				print(f'Warning: Skipping track due to error: {e}')
+				continue
 
 		print('Generating popular tracks... DONE.')
 		return popular_tracks
@@ -334,8 +357,13 @@ class PlexPlaylistBuilder():
 		print('Generating spice tracks...')
 		spice_tracks = []
 		for track in self.music_library.library_search('random', 'track', 300):
-			track_data = self._build_track_dict(track, 'spice')
-			spice_tracks.append(track_data)
+			try:
+				track_data = self._build_track_dict(track, 'spice')
+				spice_tracks.append(track_data)
+			except Exception as e:
+				# Skip tracks that cause errors during processing
+				print(f'Warning: Skipping track due to error: {e}')
+				continue
 
 		print('Generating spice tracks... DONE.')
 		return spice_tracks
