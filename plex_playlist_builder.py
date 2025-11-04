@@ -314,19 +314,22 @@ class PlexPlaylistBuilder():
 		if play_count < 1:
 			play_count = 1
 
+		tracks_processed = 0
+		tracks_errored = 0
+		
 		for track in self.music_library.recently_played_tracks(limit=play_count):
-			if not track.lastViewedAt:
-				# We only want tracks that have been played
-				continue
+			tracks_processed += 1
+			# Include tracks even if lastViewedAt is None - they'll still be weighted appropriately
 			try:
 				track_data = self._build_track_dict(track, 'recent')
 				recent_tracks.append(track_data)
 			except Exception as e:
 				# Skip tracks that cause errors during processing
+				tracks_errored += 1
 				print(f'Warning: Skipping track due to error: {e}')
 				continue
 
-		print('Generating recently played tracks... DONE.')
+		print(f'Generating recently played tracks... DONE. (Processed: {tracks_processed}, Added: {len(recent_tracks)}, Errors: {tracks_errored})')
 		return recent_tracks
 
 	def _generate_popular_tracks(self):
@@ -338,19 +341,30 @@ class PlexPlaylistBuilder():
 		if play_count < 1:
 			play_count = 1
 
-		for track in self.music_library.top_played_tracks(limit=play_count):
-			if not track.viewCount:
-				# We only want played tracks
-				continue
+		tracks_processed = 0
+		tracks_errored = 0
+		
+		# Try to get top played tracks first
+		tracks = list(self.music_library.top_played_tracks(limit=play_count))
+		
+		# If no tracks from top_played_tracks, fallback to library search sorted by viewCount
+		if not tracks:
+			print('No tracks from top_played_tracks, using library search fallback...')
+			tracks = list(self.music_library.library_search('viewCount:desc', 'track', limit=play_count))
+		
+		for track in tracks:
+			tracks_processed += 1
+			# Include tracks even if viewCount is 0 or None - they'll still be weighted appropriately
 			try:
 				track_data = self._build_track_dict(track, 'popular')
 				popular_tracks.append(track_data)
 			except Exception as e:
 				# Skip tracks that cause errors during processing
+				tracks_errored += 1
 				print(f'Warning: Skipping track due to error: {e}')
 				continue
 
-		print('Generating popular tracks... DONE.')
+		print(f'Generating popular tracks... DONE. (Processed: {tracks_processed}, Added: {len(popular_tracks)}, Errors: {tracks_errored})')
 		return popular_tracks
 
 	def _generate_spice_tracks(self):
