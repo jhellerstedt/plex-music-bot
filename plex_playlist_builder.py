@@ -53,34 +53,40 @@ class PlexPlaylistBuilder():
 
 	@property
 	def popular_tracks(self):
-		if not self._popular_tracks:
+		if self._popular_tracks is None:
 			self._popular_tracks = self._generate_popular_tracks()
 		return self._popular_tracks
 
 	@property
 	def recent_tracks(self):
-		if not self._recent_tracks:
+		if self._recent_tracks is None:
 			self._recent_tracks = self._generate_recently_played_tracks()
 		return self._recent_tracks
 
 	@property
 	def spice_tracks(self):
-		if not self._spice_tracks:
+		if self._spice_tracks is None:
 			self._spice_tracks = self._generate_spice_tracks()
 		return self._spice_tracks
 
 	@property
 	def play_count_min(self):
 		if self._play_count_min is None:
-			self._play_count_min = self.music_library.library_search('viewCount:asc', 'track', 1)[0].viewCount
-		if self._play_count_min is None:
-			self._play_count_min = 0
+			results = self.music_library.library_search('viewCount:asc', 'track', 1)
+			if results and len(results) > 0:
+				self._play_count_min = results[0].viewCount or 0
+			else:
+				self._play_count_min = 0
 		return self._play_count_min
 
 	@property
 	def play_count_max(self):
-		if not self._play_count_max:
-			self._play_count_max = self.music_library.top_played_tracks(limit=1)[0].viewCount
+		if self._play_count_max is None:
+			results = self.music_library.top_played_tracks(limit=1)
+			if results and len(results) > 0:
+				self._play_count_max = results[0].viewCount or 0
+			else:
+				self._play_count_max = 0
 		return self._play_count_max
 
 	@property
@@ -91,36 +97,52 @@ class PlexPlaylistBuilder():
 
 	@property
 	def last_played_max(self):
-		if not self._last_played_max:
-			self._last_played_max = self.music_library.recently_played_tracks(limit=1)[0].lastViewedAt
+		if self._last_played_max is None:
+			results = self.music_library.recently_played_tracks(limit=1)
+			if results and len(results) > 0 and results[0].lastViewedAt:
+				self._last_played_max = results[0].lastViewedAt
+			else:
+				self._last_played_max = datetime.utcnow()
 		return self._last_played_max
 
 	@property
 	def artist_play_count_min(self):
 		if self._artist_play_count_min is None:
-			self._artist_play_count_min = self.music_library.library_search('viewCount:asc', 'artist', 1)[0].viewCount
-		if self._artist_play_count_min is None:
-			self._artist_play_count_min = 0
+			results = self.music_library.library_search('viewCount:asc', 'artist', 1)
+			if results and len(results) > 0:
+				self._artist_play_count_min = results[0].viewCount or 0
+			else:
+				self._artist_play_count_min = 0
 		return self._artist_play_count_min
 
 	@property
 	def artist_play_count_max(self):
-		if not self._artist_play_count_max:
-			self._artist_play_count_max = self.music_library.library_search('viewCount:desc', 'artist', 1)[0].viewCount
+		if self._artist_play_count_max is None:
+			results = self.music_library.library_search('viewCount:desc', 'artist', 1)
+			if results and len(results) > 0:
+				self._artist_play_count_max = results[0].viewCount or 0
+			else:
+				self._artist_play_count_max = 0
 		return self._artist_play_count_max
 
 	@property
 	def album_play_count_min(self):
 		if self._album_play_count_min is None:
-			self._album_play_count_min = self.music_library.library_search('viewCount:asc', 'album', 1)[0].viewCount
-		if self._album_play_count_min is None:
-			self._album_play_count_min = 0
+			results = self.music_library.library_search('viewCount:asc', 'album', 1)
+			if results and len(results) > 0:
+				self._album_play_count_min = results[0].viewCount or 0
+			else:
+				self._album_play_count_min = 0
 		return self._album_play_count_min
 
 	@property
 	def album_play_count_max(self):
-		if not self._album_play_count_max:
-			self._album_play_count_max = self.music_library.library_search('viewCount:desc', 'album', 1)[0].viewCount
+		if self._album_play_count_max is None:
+			results = self.music_library.library_search('viewCount:desc', 'album', 1)
+			if results and len(results) > 0:
+				self._album_play_count_max = results[0].viewCount or 0
+			else:
+				self._album_play_count_max = 0
 		return self._album_play_count_max
 
 	@property
