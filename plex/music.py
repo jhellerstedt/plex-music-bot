@@ -21,6 +21,11 @@ class PlexMusic():
 	def least_played_tracks(self, limit=50):
 		return self.library_search('viewCount:asc', 'track', limit)
 
+	def oldest_played_tracks(self, limit=50):
+		"""Get tracks sorted by oldest last played date (ascending). 
+		Tracks that haven't been played recently will appear first."""
+		return self.library_search('lastViewedAt:asc', 'track', limit)
+
 	def all_tracks(self):
 		return self.library.all(libtype='track')
 
