@@ -239,18 +239,35 @@ class PlexPlaylistBuilder():
 		return rating_normalized_to_apply
 
 	def _get_track_last_played_normalized(self, plex_track_last_played):
-		last_played_adjusted = 0
-		if plex_track_last_played:
-			last_played_normalized = self._normalize(
-				plex_track_last_played.timestamp(),
-				max_value=self.last_played_max.timestamp(),
-				min_value=self.last_played_min.timestamp()
-			)
-			last_played_adjusted = (1 - last_played_normalized)
-			if last_played_adjusted > 0.5:
-				last_played_adjusted = last_played_adjusted * 2
-			elif last_played_adjusted < 0:
-				last_played_adjusted = 0
+		"""
+		Calculate weight adjustment based on last played date.
+		Higher values for tracks that haven't been played recently.
+		Tracks never played (None) get maximum boost.
+		"""
+		# Tracks that have never been played get maximum preference
+		if not plex_track_last_played:
+			return 2.0  # Maximum boost for unplayed tracks
+		
+		# Normalize the last played timestamp (0 = oldest, 1 = most recent)
+		last_played_normalized = self._normalize(
+			plex_track_last_played.timestamp(),
+			max_value=self.last_played_max.timestamp(),
+			min_value=self.last_played_min.timestamp()
+		)
+		
+		# Invert so older tracks get higher values (1 = oldest, 0 = most recent)
+		# This gives preference to tracks that haven't been played recently
+		last_played_adjusted = last_played_normalized
+		
+		# Boost tracks that haven't been played in a while
+		# Tracks older than 50% of the range get additional boost
+		if last_played_adjusted > 0.5:
+			last_played_adjusted = last_played_adjusted * 2
+		
+		# Ensure non-negative
+		if last_played_adjusted < 0:
+			last_played_adjusted = 0
+			
 		return last_played_adjusted
 
 	def _get_artist_playcount_normalized(self, plex_track_artist):
